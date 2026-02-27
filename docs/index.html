@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Supply Chain Disruption Simulator — Nigeria</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Epilogue:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#f8f7f3;
+  --white:#ffffff;
+  --stone:#f2f0eb;
+  --stone2:#e8e5de;
+  --border:#dedad2;
+  --border2:#ccc9bf;
+  --ink:#181714;
+  --ink2:#33302a;
+  --muted:#7b7769;
+  --muted2:#a8a498;
+  --red:#b91c1c;
+  --red2:#dc2626;
+  --red-l:#fef2f2;
+  --red-m:#fecaca;
+  --amber:#92400e;
+  --amber2:#b45309;
+  --amber-l:#fffbeb;
+  --amber-m:#fde68a;
+  --green:#065f46;
+  --green2:#047857;
+  --green-l:#ecfdf5;
+  --green-m:#a7f3d0;
+  --blue:#1e40af;
+  --blue-l:#eff6ff;
+  --blue-m:#bfdbfe;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Epilogue',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--stone);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* NAV */
+.nav{background:var(--white);border-bottom:2px solid var(--ink);padding:0 48px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.nav-brand{font-family:'DM Serif Display',serif;font-size:18px;color:var(--ink);letter-spacing:-.01em;}
+.nav-brand span{font-style:italic;color:var(--red2);}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.nav-tag{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;}
+.severity-pill{padding:4px 12px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.06em;transition:all .3s;}
+
+/* HERO */
+.hero{max-width:1280px;margin:0 auto;padding:52px 48px 36px;}
+.hero-kicker{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.22em;color:var(--red2);text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.hero-kicker::before{content:'';display:block;width:28px;height:2px;background:var(--red2);}
+.hero h1{font-family:'DM Serif Display',serif;font-size:clamp(38px,5vw,68px);line-height:1.02;color:var(--ink);margin-bottom:20px;letter-spacing:-.02em;}
+.hero h1 em{font-style:italic;color:var(--red2);}
+.hero-desc{font-size:15px;color:var(--muted);line-height:1.75;max-width:580px;margin-bottom:28px;}
+.hero-stats{display:flex;gap:32px;flex-wrap:wrap;}
+.hero-stat{display:flex;flex-direction:column;gap:3px;}
+.hero-stat-val{font-family:'DM Serif Display',serif;font-size:24px;color:var(--ink);}
+.hero-stat-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;}
+
+/* COMPANY SELECTOR */
+.company-bar{background:var(--white);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:0 48px;overflow-x:auto;}
+.company-tabs{display:flex;gap:0;min-width:max-content;}
+.company-tab{padding:16px 24px;cursor:pointer;border-bottom:3px solid transparent;transition:all .18s;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.company-tab:hover{background:var(--stone);}
+.company-tab.active{border-bottom-color:var(--red2);background:var(--red-l);}
+.company-tab-name{font-size:13px;font-weight:700;color:var(--ink2);}
+.company-tab-sector{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+.company-tab-icon{font-size:18px;}
+
+/* MAIN LAYOUT */
+.sim-main{max-width:1280px;margin:0 auto;padding:36px 48px;}
+.sim-grid{display:grid;grid-template-columns:380px 1fr;gap:28px;align-items:start;}
+@media(max-width:1024px){.sim-grid{grid-template-columns:1fr;}}
+
+/* CONTROL PANEL */
+.control-panel{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.04);position:sticky;top:68px;}
+.cp-header{padding:20px 24px;border-bottom:1px solid var(--border);background:var(--ink);}
+.cp-title{font-family:'DM Serif Display',serif;font-size:18px;color:#fff;}
+.cp-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:3px;font-family:'JetBrains Mono',monospace;}
+.cp-body{padding:22px 24px;}
+
+/* SLIDERS */
+.slider-group{margin-bottom:24px;}
+.slider-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.slider-name{font-size:12px;font-weight:700;color:var(--ink2);letter-spacing:.02em;}
+.slider-val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;transition:color .2s;}
+.slider-desc{font-size:10px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-bottom:8px;line-height:1.4;}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;height:5px;
+  border-radius:3px;outline:none;cursor:pointer;transition:background .1s;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:18px;height:18px;border-radius:50%;
+  border:3px solid var(--white);box-shadow:0 1px 6px rgba(0,0,0,0.2);
+  cursor:pointer;transition:transform .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15);}
+
+.range-red{background:linear-gradient(90deg,var(--red-m),var(--red2));}
+.range-red::-webkit-slider-thumb{background:var(--red2);}
+.range-amber{background:linear-gradient(90deg,var(--amber-m),var(--amber2));}
+.range-amber::-webkit-slider-thumb{background:var(--amber2);}
+.range-blue{background:linear-gradient(90deg,var(--blue-m),var(--blue));}
+.range-blue::-webkit-slider-thumb{background:var(--blue);}
+.range-green{background:linear-gradient(90deg,var(--green-m),var(--green2));}
+.range-green::-webkit-slider-thumb{background:var(--green2);}
+
+.slider-ticks{display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--muted2);margin-top:4px;}
+
+/* SCENARIO BUTTONS */
+.scenario-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px;padding-top:20px;border-top:1px solid var(--border);}
+.scenario-btn{padding:9px 8px;border:1.5px solid var(--border);border-radius:8px;background:transparent;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.06em;font-weight:600;text-transform:uppercase;color:var(--muted);transition:all .18s;text-align:center;}
+.scenario-btn:hover{border-color:var(--ink);color:var(--ink);background:var(--stone);}
+.scenario-btn.mild{border-color:var(--green2);color:var(--green);}
+.scenario-btn.moderate{border-color:var(--amber2);color:var(--amber);}
+.scenario-btn.severe{border-color:var(--red2);color:var(--red);}
+.scenario-btn.crisis{border-color:var(--ink);color:var(--ink);background:var(--ink);color:#fff;}
+
+/* RESET */
+.reset-btn{width:100%;margin-top:12px;padding:10px;background:transparent;border:1.5px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;color:var(--muted);cursor:pointer;transition:all .18s;text-transform:uppercase;}
+.reset-btn:hover{border-color:var(--border2);color:var(--ink2);}
+
+/* RESULTS PANEL */
+.results{display:flex;flex-direction:column;gap:20px;}
+
+/* IMPACT HEADER */
+.impact-header{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.04);}
+.ih-top{padding:24px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;}
+.ih-left{}
+.ih-company{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.ih-total-label{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:4px;letter-spacing:.04em;}
+.ih-total{font-family:'DM Serif Display',serif;font-size:clamp(36px,5vw,58px);line-height:1;transition:color .3s;}
+.ih-total-sub{font-size:12px;color:var(--muted);margin-top:5px;}
+.ih-right{text-align:right;}
+.ih-severity{font-family:'DM Serif Display',serif;font-size:28px;transition:color .3s;}
+.ih-severity-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:3px;}
+.ih-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);}
+.ih-cell{padding:18px 20px;border-right:1px solid var(--border);transition:background .2s;}
+.ih-cell:last-child{border-right:none;}
+.ih-cell-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600;transition:color .3s;}
+.ih-cell-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:4px;}
+@media(max-width:700px){.ih-grid{grid-template-columns:1fr 1fr;}.ih-cell:nth-child(2){border-right:none;}.ih-cell:nth-child(3){border-right:1px solid var(--border);}}
+
+/* CARD */
+.card{background:var(--white);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.04);}
+.card-header{padding:18px 24px;border-bottom:1px solid var(--border);background:var(--stone);display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.08em;color:var(--ink);text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+.card-body{padding:22px 24px;}
+
+/* COST ROWS */
+.cost-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--stone2);transition:all .2s;}
+.cost-row:last-child{border-bottom:none;}
+.cr-left{display:flex;align-items:center;gap:10px;}
+.cr-icon{font-size:16px;}
+.cr-name{font-size:13px;font-weight:600;color:var(--ink2);}
+.cr-note{font-size:10px;color:var(--muted2);font-family:'JetBrains Mono',monospace;margin-top:2px;}
+.cr-right{text-align:right;}
+.cr-base{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2);text-decoration:line-through;}
+.cr-new{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;transition:color .3s;}
+.cr-delta{font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;margin-top:2px;transition:color .3s;}
+
+/* CHART AREA */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+@media(max-width:800px){.chart-grid{grid-template-columns:1fr;}}
+.chart-box{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:22px;box-shadow:0 2px 16px rgba(0,0,0,0.04);}
+.chart-title-sm{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.chart-title-lg{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:16px;}
+.chart-wrap{height:200px;position:relative;}
+
+/* RECOMMENDATION BOX */
+.rec-box{border-radius:10px;padding:16px 18px;margin-bottom:10px;border-left:4px solid;}
+.rec-box.critical{background:var(--red-l);border-color:var(--red2);}
+.rec-box.warning{background:var(--amber-l);border-color:var(--amber2);}
+.rec-box.good{background:var(--green-l);border-color:var(--green2);}
+.rec-box.info{background:var(--blue-l);border-color:var(--blue);}
+.rec-title{font-size:12px;font-weight:700;margin-bottom:4px;}
+.rec-body{font-size:11.5px;line-height:1.6;color:var(--ink2);}
+
+/* PROGRESS BAR */
+.prog-bar{height:8px;background:var(--stone2);border-radius:4px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:4px;transition:width .6s cubic-bezier(.4,0,.2,1),background .3s;}
+
+/* TABLE */
+.sim-table{width:100%;border-collapse:collapse;}
+.sim-table th{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;padding:9px 14px;text-align:left;background:var(--stone);border-bottom:1px solid var(--border);}
+.sim-table td{padding:11px 14px;font-size:12.5px;border-bottom:1px solid var(--stone2);color:var(--ink2);}
+.sim-table tr:last-child td{border-bottom:none;}
+.sim-table tr:hover td{background:var(--stone);}
+
+/* FOOTER */
+.sim-footer{border-top:1px solid var(--border);padding:22px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;background:var(--white);margin-top:40px;}
+.sf-left{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.sf-right{font-size:10px;color:var(--muted2);font-family:'JetBrains Mono',monospace;}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fadeUp .3s ease;}
+
+/* Number flash */
+@keyframes flash{0%{opacity:.4;}100%{opacity:1;}}
+.flash{animation:flash .25s ease;}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-brand">Supply Chain <span>Disruption</span> Simulator</div>
+  <div class="nav-right">
+    <div class="nav-tag">Nigeria · Real Company Data · 2024</div>
+    <div class="severity-pill" id="nav-severity" style="background:var(--green-l);color:var(--green);">● STABLE</div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-kicker">Interactive Risk Tool</div>
+  <h1>What Does a <em>Supply Chain</em><br/>Shock Cost Nigeria?</h1>
+  <p class="hero-desc">Move the sliders to simulate real disruption scenarios — Naira devaluation, port delays, fuel price spikes, supplier failure. See the exact cost impact on real Nigerian companies in real time.</p>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--red2);">₦1,590</div>
+      <div class="hero-stat-lbl">USD/NGN Today</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--amber2);">+282%</div>
+      <div class="hero-stat-lbl">Naira Depreciation Since 2022</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val">5 Companies</div>
+      <div class="hero-stat-lbl">Modelled in this simulator</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--red2);">₦847B+</div>
+      <div class="hero-stat-lbl">Estimated FX losses 2023</div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPANY SELECTOR -->
+<div class="company-bar">
+  <div class="company-tabs" id="company-tabs">
+    <div class="company-tab active" onclick="selectCompany(0,this)">
+      <div class="company-tab-icon">🏭</div>
+      <div><div class="company-tab-name">Dangote Cement</div><div class="company-tab-sector">Manufacturing</div></div>
+    </div>
+    <div class="company-tab" onclick="selectCompany(1,this)">
+      <div class="company-tab-icon">📱</div>
+      <div><div class="company-tab-name">Jumia Nigeria</div><div class="company-tab-sector">E-Commerce / Logistics</div></div>
+    </div>
+    <div class="company-tab" onclick="selectCompany(2,this)">
+      <div class="company-tab-icon">🛢️</div>
+      <div><div class="company-tab-name">NNPC Retail</div><div class="company-tab-sector">Energy / Petroleum</div></div>
+    </div>
+    <div class="company-tab" onclick="selectCompany(3,this)">
+      <div class="company-tab-icon">🏥</div>
+      <div><div class="company-tab-name">Nigerian Breweries</div><div class="company-tab-sector">FMCG / Beverages</div></div>
+    </div>
+    <div class="company-tab" onclick="selectCompany(4,this)">
+      <div class="company-tab-icon">🚚</div>
+      <div><div class="company-tab-name">GIG Logistics</div><div class="company-tab-sector">Supply Chain / Logistics</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIMULATOR -->
+<div class="sim-main">
+  <div class="sim-grid">
+
+    <!-- CONTROL PANEL -->
+    <div class="control-panel">
+      <div class="cp-header">
+        <div class="cp-title">Disruption Controls</div>
+        <div class="cp-sub">Drag sliders · Results update instantly</div>
+      </div>
+      <div class="cp-body">
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <div class="slider-name">💱 Naira Devaluation</div>
+            <div class="slider-val" id="val-fx" style="color:var(--red2);">0%</div>
+          </div>
+          <div class="slider-desc">How much the Naira weakens beyond today's ₦1,590/$. Every 10% = higher import costs for raw materials and machinery.</div>
+          <input type="range" id="sl-fx" class="range-red" min="0" max="80" step="5" value="0" oninput="simulate()"/>
+          <div class="slider-ticks"><span>0%</span><span>20%</span><span>40%</span><span>60%</span><span>80%</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <div class="slider-name">⛽ Fuel Price Increase</div>
+            <div class="slider-val" id="val-fuel" style="color:var(--amber2);">0%</div>
+          </div>
+          <div class="slider-desc">Petrol / diesel cost spike. Affects transportation, generator costs, and logistics at every step of the supply chain.</div>
+          <input type="range" id="sl-fuel" class="range-amber" min="0" max="150" step="10" value="0" oninput="simulate()"/>
+          <div class="slider-ticks"><span>0%</span><span>50%</span><span>100%</span><span>150%</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <div class="slider-name">⚓ Port Clearance Delay</div>
+            <div class="slider-val" id="val-port" style="color:var(--blue);">0 days</div>
+          </div>
+          <div class="slider-desc">Extra days beyond normal 22-day Apapa clearance. Each extra day adds demurrage, storage, and working capital costs.</div>
+          <input type="range" id="sl-port" class="range-blue" min="0" max="60" step="5" value="0" oninput="simulate()"/>
+          <div class="slider-ticks"><span>0d</span><span>15d</span><span>30d</span><span>45d</span><span>60d</span></div>
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <div class="slider-name">🔗 Supplier Failure Rate</div>
+            <div class="slider-val" id="val-supplier" style="color:var(--green2);">0%</div>
+          </div>
+          <div class="slider-desc">% of key suppliers that fail to deliver — due to insolvency, strikes, or natural disaster. Forces emergency sourcing at premium prices.</div>
+          <input type="range" id="sl-supplier" class="range-green" min="0" max="50" step="5" value="0" oninput="simulate()"/>
+          <div class="slider-ticks"><span>0%</span><span>10%</span><span>25%</span><span>50%</span></div>
+        </div>
+
+        <!-- SCENARIOS -->
+        <div style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.14em;color:var(--muted2);text-transform:uppercase;margin-bottom:10px;">Quick Scenarios</div>
+        <div class="scenario-btns">
+          <button class="scenario-btn mild" onclick="loadScenario('mild')">2023 Mild</button>
+          <button class="scenario-btn moderate" onclick="loadScenario('moderate')">2024 Reality</button>
+          <button class="scenario-btn severe" onclick="loadScenario('severe')">Severe Shock</button>
+          <button class="scenario-btn crisis" onclick="loadScenario('crisis')">Full Crisis</button>
+        </div>
+        <button class="reset-btn" onclick="resetAll()">↺ Reset to Baseline</button>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results">
+
+      <!-- IMPACT HEADER -->
+      <div class="impact-header">
+        <div class="ih-top">
+          <div class="ih-left">
+            <div class="ih-company" id="ih-company">Dangote Cement · Manufacturing</div>
+            <div class="ih-total-label">Annual Additional Cost Impact</div>
+            <div class="ih-total" id="ih-total" style="color:var(--green2);">₦0</div>
+            <div class="ih-total-sub" id="ih-sub">No disruption — baseline normal operations</div>
+          </div>
+          <div class="ih-right">
+            <div class="ih-severity" id="ih-severity" style="color:var(--green2);">STABLE</div>
+            <div class="ih-severity-lbl">Disruption Level</div>
+          </div>
+        </div>
+        <div class="ih-grid">
+          <div class="ih-cell">
+            <div class="ih-cell-val" id="cell-fx" style="color:var(--red2);">+₦0</div>
+            <div class="ih-cell-lbl">FX Impact</div>
+          </div>
+          <div class="ih-cell">
+            <div class="ih-cell-val" id="cell-fuel" style="color:var(--amber2);">+₦0</div>
+            <div class="ih-cell-lbl">Fuel Cost Impact</div>
+          </div>
+          <div class="ih-cell">
+            <div class="ih-cell-val" id="cell-port" style="color:var(--blue);">+₦0</div>
+            <div class="ih-cell-lbl">Port Delay Cost</div>
+          </div>
+          <div class="ih-cell">
+            <div class="ih-cell-val" id="cell-supplier" style="color:var(--green2);">+₦0</div>
+            <div class="ih-cell-lbl">Emergency Sourcing</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COST BREAKDOWN -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Cost Line Breakdown</div>
+          <div id="card-rate" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);">Baseline → Simulated</div>
+        </div>
+        <div class="card-body" id="cost-rows"></div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="chart-grid">
+        <div class="chart-box">
+          <div class="chart-title-sm">Cost Structure</div>
+          <div class="chart-title-lg">Before vs After Disruption</div>
+          <div class="chart-wrap"><canvas id="barChart"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <div class="chart-title-sm">FX Devaluation Curve</div>
+          <div class="chart-title-lg">Total Cost at Each Naira Level</div>
+          <div class="chart-wrap"><canvas id="fxCurve"></canvas></div>
+        </div>
+      </div>
+
+      <!-- RECOMMENDATIONS -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Procurement Risk Recommendations</div></div>
+        <div class="card-body" id="recommendations"></div>
+      </div>
+
+      <!-- SCENARIO COMPARISON TABLE -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Scenario Comparison — All Disruption Levels</div></div>
+        <div style="overflow-x:auto;">
+          <table class="sim-table" id="scenario-table">
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>FX Rate</th>
+                <th>Fuel +%</th>
+                <th>Port Delay</th>
+                <th>Supplier Risk</th>
+                <th>Extra Annual Cost</th>
+                <th>Severity</th>
+              </tr>
+            </thead>
+            <tbody id="scenario-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="sim-footer">
+  <div class="sf-left">Built by <strong>Miracle Ugokwe</strong> · Procurement Manager & Data Analyst · MSc Procurement Management, FUTO</div>
+  <div class="sf-right">Data: CBN FX Archive · NPA Port Statistics · NNPC Price History · Company Annual Reports 2023/2024</div>
+</div>
+
+<script>
+// ── COMPANIES ──
+const COMPANIES = [
+  {
+    name:'Dangote Cement', sector:'Manufacturing', icon:'🏭',
+    baseRevenue: 2100000000000, // ₦2.1T
+    importRatio: 0.42, // 42% of costs are import-related
+    fuelRatio: 0.18,   // 18% of costs are fuel
+    logisticsRatio: 0.12,
+    baseCost: 1200000000000,
+    shipments: 240,    // annual shipments
+    avgShipmentValue: 850000000,
+    description:'Nigeria\'s largest cement manufacturer. Imports clinker, gypsum, and spare parts. Heavy fuel dependency for kiln operations.'
+  },
+  {
+    name:'Jumia Nigeria', sector:'E-Commerce / Logistics', icon:'📱',
+    baseRevenue: 180000000000,
+    importRatio: 0.65,
+    fuelRatio: 0.22,
+    logisticsRatio: 0.28,
+    baseCost: 210000000000,
+    shipments: 1200,
+    avgShipmentValue: 45000000,
+    description:'Nigeria\'s largest e-commerce platform. Sources 65% of inventory from China and UAE. Last-mile delivery is fuel-intensive.'
+  },
+  {
+    name:'NNPC Retail', sector:'Energy / Petroleum', icon:'🛢️',
+    baseRevenue: 8500000000000,
+    importRatio: 0.78,
+    fuelRatio: 0.08,
+    logisticsRatio: 0.09,
+    baseCost: 7200000000000,
+    shipments: 420,
+    avgShipmentValue: 4200000000,
+    description:'State petroleum company. Imports refined products. USD-denominated purchase contracts make it extremely FX-sensitive.'
+  },
+  {
+    name:'Nigerian Breweries', sector:'FMCG / Beverages', icon:'🏥',
+    baseRevenue: 680000000000,
+    importRatio: 0.38,
+    fuelRatio: 0.14,
+    logisticsRatio: 0.16,
+    baseCost: 490000000000,
+    shipments: 180,
+    avgShipmentValue: 320000000,
+    description:'Nigeria\'s leading brewery (Heineken subsidiary). Imports barley, hops, packaging materials. Distribution network spans 36 states.'
+  },
+  {
+    name:'GIG Logistics', sector:'Supply Chain / Logistics', icon:'🚚',
+    baseRevenue: 95000000000,
+    importRatio: 0.28,
+    fuelRatio: 0.38,
+    logisticsRatio: 0.44,
+    baseCost: 78000000000,
+    shipments: 60,
+    avgShipmentValue: 180000000,
+    description:'Nigeria\'s largest indigenous logistics company. Fuel is the biggest cost driver. Vehicle parts are fully imported.'
+  },
+];
+
+let currentCompany = 0;
+let barChart = null, fxChart = null;
+
+function fmt(n) {
+  if(Math.abs(n)>=1e12) return '₦'+(n/1e12).toFixed(2)+'T';
+  if(Math.abs(n)>=1e9) return '₦'+(n/1e9).toFixed(1)+'B';
+  if(Math.abs(n)>=1e6) return '₦'+(n/1e6).toFixed(1)+'M';
+  return '₦'+Math.round(n).toLocaleString();
+}
+
+function selectCompany(idx, el) {
+  currentCompany = idx;
+  document.querySelectorAll('.company-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  simulate();
+}
+
+function getValues() {
+  return {
+    fx: parseFloat(document.getElementById('sl-fx').value)/100,
+    fuel: parseFloat(document.getElementById('sl-fuel').value)/100,
+    port: parseFloat(document.getElementById('sl-port').value),
+    supplier: parseFloat(document.getElementById('sl-supplier').value)/100,
+  };
+}
+
+function updateSliderDisplays(v) {
+  document.getElementById('val-fx').textContent = (v.fx*100).toFixed(0)+'%';
+  document.getElementById('val-fuel').textContent = (v.fuel*100).toFixed(0)+'%';
+  document.getElementById('val-port').textContent = v.port+' days';
+  document.getElementById('val-supplier').textContent = (v.supplier*100).toFixed(0)+'%';
+
+  // Color intensity
+  const fxPct = v.fx/0.8;
+  document.getElementById('val-fx').style.color = fxPct>0.5?'#b91c1c':fxPct>0.2?'#d97706':'#065f46';
+  const fuelPct = v.fuel/1.5;
+  document.getElementById('val-fuel').style.color = fuelPct>0.5?'#b91c1c':fuelPct>0.2?'#b45309':'#065f46';
+}
+
+function getSeverity(totalExtra, baseCost) {
+  const pct = totalExtra / baseCost;
+  if(pct <= 0.01) return {label:'STABLE', color:'var(--green2)', navColor:'var(--green-l)', navText:'var(--green)', bg:'var(--green-l)'};
+  if(pct <= 0.08) return {label:'MILD', color:'#2563eb', navColor:'var(--blue-l)', navText:'var(--blue)', bg:'var(--blue-l)'};
+  if(pct <= 0.18) return {label:'MODERATE', color:'var(--amber2)', navColor:'var(--amber-l)', navText:'var(--amber)', bg:'var(--amber-l)'};
+  if(pct <= 0.35) return {label:'SEVERE', color:'var(--red2)', navColor:'var(--red-l)', navText:'var(--red)', bg:'var(--red-l)'};
+  return {label:'CRISIS', color:'#7f1d1d', navColor:'#7f1d1d', navText:'#fff', bg:'var(--red-l)'};
+}
+
+function simulate() {
+  const v = getValues();
+  updateSliderDisplays(v);
+  const co = COMPANIES[currentCompany];
+
+  // ── CALCULATE IMPACTS ──
+  const importBase = co.baseCost * co.importRatio;
+  const fuelBase = co.baseCost * co.fuelRatio;
+  const logisticsBase = co.baseCost * co.logisticsRatio;
+  const otherBase = co.baseCost * (1 - co.importRatio - co.fuelRatio - co.logisticsRatio);
+
+  // FX impact: import costs rise by devaluation %
+  const fxImpact = importBase * v.fx;
+
+  // Fuel impact
+  const fuelImpact = (fuelBase + logisticsBase * 0.4) * v.fuel;
+
+  // Port delay: demurrage = ~₦850,000/day per container × estimated containers
+  const containersPerYear = co.shipments * 3;
+  const demurragePerDay = 950000;
+  const portImpact = containersPerYear * demurragePerDay * v.port;
+
+  // Supplier failure: emergency sourcing premium 25-40%
+  const supplierImpact = importBase * v.supplier * 0.32;
+
+  const totalExtra = fxImpact + fuelImpact + portImpact + supplierImpact;
+  const sev = getSeverity(totalExtra, co.baseCost);
+
+  // ── UPDATE HEADER ──
+  animVal('ih-total', fmt(totalExtra), sev.color);
+  document.getElementById('ih-company').textContent = co.name + ' · ' + co.sector;
+  document.getElementById('ih-sub').textContent = totalExtra===0
+    ? 'No disruption — baseline normal operations'
+    : `+${((totalExtra/co.baseCost)*100).toFixed(1)}% above baseline annual costs · ${sev.label} disruption`;
+
+  animVal('ih-severity', sev.label, sev.color);
+  animVal('cell-fx', '+'+fmt(fxImpact), 'var(--red2)');
+  animVal('cell-fuel', '+'+fmt(fuelImpact), 'var(--amber2)');
+  animVal('cell-port', '+'+fmt(portImpact), 'var(--blue)');
+  animVal('cell-supplier', '+'+fmt(supplierImpact), 'var(--green2)');
+
+  // Nav severity
+  const navSev = document.getElementById('nav-severity');
+  navSev.textContent = '● '+sev.label;
+  navSev.style.background = sev.bg;
+  navSev.style.color = sev.color;
+
+  document.getElementById('card-rate').textContent =
+    `Baseline ₦1,590/$ → Simulated ₦${Math.round(1590*(1+v.fx)).toLocaleString()}/$`;
+
+  // ── COST ROWS ──
+  const rows = [
+    {icon:'🌍', name:'Import / Raw Material Costs', note:'USD-denominated purchases · '+Math.round(co.importRatio*100)+'% of base costs',
+      base:importBase, new_:importBase+fxImpact, delta:fxImpact},
+    {icon:'⛽', name:'Fuel & Energy Costs', note:'Diesel, petrol, industrial fuel · '+Math.round(co.fuelRatio*100)+'% of base costs',
+      base:fuelBase, new_:fuelBase+fuelImpact, delta:fuelImpact},
+    {icon:'🚚', name:'Logistics & Transportation', note:'Last-mile delivery, haulage, warehousing',
+      base:logisticsBase, new_:logisticsBase+(fuelImpact*0.4), delta:fuelImpact*0.4},
+    {icon:'⚓', name:'Port Charges & Demurrage', note:co.shipments+' shipments/yr · '+containersPerYear+' containers · ₦950K/day rate',
+      base:0, new_:portImpact, delta:portImpact},
+    {icon:'🔗', name:'Emergency Sourcing Premium', note:'Replacement suppliers charge '+Math.round(v.supplier*100===0?0:32)+'% premium for urgent orders',
+      base:0, new_:supplierImpact, delta:supplierImpact},
+    {icon:'📦', name:'Other Operating Costs', note:'Overhead, admin, non-import related',
+      base:otherBase, new_:otherBase, delta:0},
+  ];
+
+  const cr = document.getElementById('cost-rows');
+  cr.innerHTML = rows.map(r=>{
+    const pct = r.delta>0?'+'+((r.delta/co.baseCost)*100).toFixed(1)+'%':'—';
+    const color = r.delta>0?'var(--red2)':r.delta<0?'var(--green2)':'var(--muted2)';
+    const prog = Math.min((r.new_/co.baseCost)*100, 50);
+    return `<div class="cost-row">
+      <div class="cr-left">
+        <div class="cr-icon">${r.icon}</div>
+        <div>
+          <div class="cr-name">${r.name}</div>
+          <div class="cr-note">${r.note}</div>
+          <div class="prog-bar" style="width:200px;">
+            <div class="prog-fill" style="width:${prog}%;background:${r.delta>0?'var(--red2)':'var(--border2)'};"></div>
+          </div>
+        </div>
+      </div>
+      <div class="cr-right">
+        ${r.base>0?`<div class="cr-base">${fmt(r.base)}</div>`:''}
+        <div class="cr-new" style="color:${r.delta>0?'var(--red2)':'var(--ink2)'};">${fmt(r.new_)}</div>
+        <div class="cr-delta" style="color:${color};">${r.delta>0?'+'+fmt(r.delta):pct}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── BAR CHART ──
+  if(barChart) barChart.destroy();
+  const categories = ['Import Costs','Fuel & Energy','Logistics','Port Charges','Emergency\nSourcing'];
+  const baseBars = [importBase/1e9, fuelBase/1e9, logisticsBase/1e9, 0, 0];
+  const addBars = [fxImpact/1e9, fuelImpact/1e9, fuelImpact*0.4/1e9, portImpact/1e9, supplierImpact/1e9];
+  barChart = new Chart(document.getElementById('barChart'),{
+    type:'bar',
+    data:{
+      labels:categories,
+      datasets:[
+        {label:'Baseline (₦B)',data:baseBars,backgroundColor:'rgba(200,196,185,0.6)',borderRadius:4,borderSkipped:false},
+        {label:'Additional Cost (₦B)',data:addBars,backgroundColor:'rgba(185,28,28,0.7)',borderRadius:4,borderSkipped:false},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#7b7769',boxWidth:10,font:{size:9,family:'JetBrains Mono'},padding:10}},
+        tooltip:{backgroundColor:'#181714',titleColor:'#fff',bodyColor:'#a8a498',callbacks:{label:c=>' ₦'+c.raw.toFixed(2)+'B'}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#7b7769',font:{size:9,family:'JetBrains Mono'}}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},stacked:false,ticks:{color:'#7b7769',font:{size:9,family:'JetBrains Mono'},callback:v=>'₦'+v+'B'}}
+      }
+    }
+  });
+
+  // ── FX CURVE ──
+  if(fxChart) fxChart.destroy();
+  const fxRates = [0,10,20,30,40,50,60,70,80];
+  const fxTotals = fxRates.map(pct=>{
+    const fimp = importBase*(pct/100);
+    return (co.baseCost + fimp + fuelImpact + portImpact + supplierImpact)/1e9;
+  });
+  const fxCtx = document.getElementById('fxCurve').getContext('2d');
+  const grad = fxCtx.createLinearGradient(0,0,0,180);
+  grad.addColorStop(0,'rgba(185,28,28,0.12)');grad.addColorStop(1,'rgba(185,28,28,0)');
+  fxChart = new Chart(fxCtx,{
+    type:'line',
+    data:{
+      labels:fxRates.map(r=>'+'+r+'%'),
+      datasets:[{
+        label:'Total Annual Cost',data:fxTotals,
+        borderColor:'#b91c1c',backgroundColor:grad,fill:true,tension:.4,borderWidth:2.5,
+        pointRadius:fxRates.map(r=>r===(v.fx*100)?7:3),
+        pointBackgroundColor:fxRates.map(r=>r===(v.fx*100)?'#f59e0b':'#b91c1c'),
+        pointBorderColor:'#fff',pointBorderWidth:2,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        tooltip:{backgroundColor:'#181714',titleColor:'#fff',bodyColor:'#a8a498',
+          callbacks:{
+            title:c=>'Naira devalues by '+c[0].label,
+            label:c=>' Total cost: ₦'+c.raw.toFixed(1)+'B/yr',
+            afterLabel:c=>fxRates[c.dataIndex]===(v.fx*100)?' ← Current simulation':''
+          }}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#7b7769',font:{size:9,family:'JetBrains Mono'}},
+          title:{display:true,text:'Naira Devaluation %',color:'#7b7769',font:{size:9}}},
+        y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{color:'#7b7769',font:{size:9,family:'JetBrains Mono'},callback:v=>'₦'+v.toFixed(0)+'B'},
+          title:{display:true,text:'Annual Total Cost',color:'#7b7769',font:{size:9}}}
+      }
+    }
+  });
+
+  // ── RECOMMENDATIONS ──
+  const recs = [];
+  const sevPct = totalExtra/co.baseCost;
+
+  if(v.fx > 0.3) recs.push({type:'critical',title:'🚨 Critical FX Exposure',body:`At ${(v.fx*100).toFixed(0)}% devaluation, ${co.name}'s import costs rise by ${fmt(fxImpact)} annually. Immediate action: open domiciliary accounts, pre-purchase USD for Q3/Q4 import POs, and renegotiate supplier contracts to Naira-denominated pricing where possible.`});
+  else if(v.fx > 0.1) recs.push({type:'warning',title:'⚠️ FX Risk Building',body:`A ${(v.fx*100).toFixed(0)}% devaluation adds ${fmt(fxImpact)} to import costs. Recommend hedging at least 40% of anticipated USD requirements for the next 6 months.`});
+  else recs.push({type:'good',title:'✅ FX Exposure Manageable',body:`Current devaluation level adds ${fmt(fxImpact)} — within acceptable budget variance. Maintain quarterly FX exposure review.`});
+
+  if(v.fuel > 0.5) recs.push({type:'critical',title:'🚨 Fuel Cost Crisis',body:`${(v.fuel*100).toFixed(0)}% fuel increase adds ${fmt(fuelImpact)} annually. For ${co.name}, recommend investing in CNG fleet conversion, bulk diesel storage, and renegotiating logistics contracts with fuel escalation clauses.`});
+  else if(v.fuel > 0.2) recs.push({type:'warning',title:'⛽ Fuel Costs Rising',body:`${(v.fuel*100).toFixed(0)}% fuel increase = ${fmt(fuelImpact)} extra. Consolidate delivery runs, optimize routing, and consider CNG or electric fleet pilots.`});
+
+  if(v.port > 20) recs.push({type:'critical',title:'⚓ Port Congestion Crisis',body:`${v.port} extra days at Apapa adds ${fmt(portImpact)} in demurrage. Urgent: divert shipments to Onne Port (Rivers State) or Calabar Port. Engage clearing agents 7 days before vessel arrival and pre-file customs documentation.`});
+  else if(v.port > 5) recs.push({type:'warning',title:'⚓ Port Delays Costing Money',body:`${v.port} extra days = ${fmt(portImpact)} in extra charges. Pre-register goods, use customs fast-track lanes, and maintain a buffer stock of 45 days to absorb port delays.`});
+
+  if(v.supplier > 0.2) recs.push({type:'critical',title:'🔗 Supplier Base at Risk',body:`${(v.supplier*100).toFixed(0)}% supplier failure rate forces emergency sourcing at 32% premium — adding ${fmt(supplierImpact)}. Activate secondary supplier list immediately. Minimum 2 qualified alternative suppliers per critical input category.`});
+  else if(v.supplier > 0) recs.push({type:'info',title:'🔗 Supplier Diversification Needed',body:`${(v.supplier*100).toFixed(0)}% failure rate = ${fmt(supplierImpact)} in emergency costs. Build approved vendor list of at least 3 suppliers per category and maintain safety stock.`});
+
+  if(sevPct > 0.3) recs.push({type:'critical',title:'📋 Procurement Strategy: Full Crisis Mode',body:`Combined disruption impact of ${fmt(totalExtra)} requires board-level response. Activate business continuity plan, brief CFO on cash flow impact, review credit facilities, and consider price adjustment to customers.`});
+
+  document.getElementById('recommendations').innerHTML = recs.map(r=>`
+    <div class="rec-box ${r.type}">
+      <div class="rec-title" style="color:${r.type==='critical'?'var(--red)':r.type==='warning'?'var(--amber)':r.type==='good'?'var(--green)':'var(--blue)'};">${r.title}</div>
+      <div class="rec-body">${r.body}</div>
+    </div>`).join('');
+
+  // ── SCENARIO TABLE ──
+  const scenarios = [
+    {name:'Baseline (2022)',fx:0,fuel:0,port:0,supplier:0},
+    {name:'2023 Mild Shock',fx:15,fuel:20,port:5,supplier:5},
+    {name:'2024 Reality',fx:35,fuel:60,port:15,supplier:10},
+    {name:'Severe Disruption',fx:50,fuel:100,port:30,supplier:20},
+    {name:'Full Crisis',fx:80,fuel:150,port:60,supplier:50},
+    {name:'Your Simulation',fx:Math.round(v.fx*100),fuel:Math.round(v.fuel*100),port:v.port,supplier:Math.round(v.supplier*100)},
+  ];
+
+  document.getElementById('scenario-tbody').innerHTML = scenarios.map((s,i)=>{
+    const fxR = s.fx/100, fuR = s.fuel/100, poR = s.port, suR = s.supplier/100;
+    const imp2 = importBase*fxR;
+    const fue2 = (fuelBase+logisticsBase*0.4)*fuR;
+    const por2 = containersPerYear*demurragePerDay*poR;
+    const sup2 = importBase*suR*0.32;
+    const tot = imp2+fue2+por2+sup2;
+    const pct = (tot/co.baseCost*100).toFixed(1);
+    const sv = getSeverity(tot, co.baseCost);
+    const isActive = i===5;
+    return `<tr style="${isActive?'background:rgba(185,28,28,0.04);font-weight:600;':''}">
+      <td style="font-weight:${isActive?'700':'500'};">${s.name}${isActive?' ←':''}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">₦${Math.round(1590*(1+s.fx/100)).toLocaleString()}/$</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:${s.fuel>50?'var(--red2)':'var(--ink2)'};">+${s.fuel}%</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${s.port} days</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;">${s.supplier}%</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${sv.color};">${fmt(tot)} <span style="font-size:10px;font-weight:400;">(+${pct}%)</span></td>
+      <td><span style="display:inline-block;padding:2px 8px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;background:${sv.bg};color:${sv.color};">${sv.label}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function animVal(id, text, color) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.style.color = color;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+
+function loadScenario(name) {
+  const scenarios = {
+    mild:     {fx:15, fuel:20, port:5,  supplier:5},
+    moderate: {fx:35, fuel:60, port:15, supplier:10},
+    severe:   {fx:50, fuel:100,port:30, supplier:20},
+    crisis:   {fx:80, fuel:150,port:60, supplier:50},
+  };
+  const s = scenarios[name];
+  document.getElementById('sl-fx').value = s.fx;
+  document.getElementById('sl-fuel').value = s.fuel;
+  document.getElementById('sl-port').value = s.port;
+  document.getElementById('sl-supplier').value = s.supplier;
+  simulate();
+}
+
+function resetAll() {
+  ['sl-fx','sl-fuel','sl-port','sl-supplier'].forEach(id=>{
+    document.getElementById(id).value = 0;
+  });
+  simulate();
+}
+
+// Init
+simulate();
+</script>
+</body>
+</html>
